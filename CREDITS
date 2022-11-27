@@ -1,0 +1,6 @@
+This utility would not be possible without the many contributions to the
+Apache Commons project.
+
+This utility uses three Apache Commons libraries (in the lib directory) which
+are available under the APLv2.  Multiple sources indicate that the APL is
+compatible with GPLv3, the main license for this project.
