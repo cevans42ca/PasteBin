@@ -13,10 +13,14 @@ If all of those are true, then this utility might be useful to you.
 
 ## Quick Overview
 
-This utility provides a very simple website that allows you to submit text in one browser and copy it in another (i.e. a pastebin).  Using the website shouldn't require any instructions.  To run it, you need to provide a filename where the snippets of text will be kept between runs and enough information for it to determine what interface it should listen on.
+This utility provides a very simple website that allows you to submit text in one browser and copy it in another (i.e. a pastebin).
 
-There are three lists of text items:  the pinned list, the active list, and the deleted list.  The pinned list is shown at the top of the page.  There is no limit on the number of pinned items, but the more items you have, the further you will need to scroll  in order to find the submit box.
+If you run the utility with no arguments, it will look for an interface to listen on that starts with "192.168".  The utility will always print the list of discovered interfaces.  If you need it to listen on another interface, provide one argument that matches at most one interface.  (The argument is not a regex.)  If the argument matches more than one interface, all matches are shown.
 
-There is a limit of 20 active items.  When you hit the limit, the oldest entry is moved to the deleted list.  Whenever the deleted list is changed, any items that were deleted more than 32 days ago (the longest month plus one day) are gone for good.  In other words, if you come back after a long vacation, you can still recover old deleted items up until the point where a pinned item or active item is deleted.
+## Detailed Notes
+
+Using the website shouldn't require any instructions, but the following details may be helpful.  There are three lists of text items:  the pinned list, the active list, and the deleted list.  The pinned list is shown at the top of the page.  There is no limit on the number of pinned items, but the more items you have, the further you will need to scroll in order to find the submit box.
+
+There is a limit of 20 active items.  When you hit the limit, the oldest entry is moved to the deleted list.  Whenever the deleted list is changed, any items that were deleted more than 32 days ago (the longest month plus one day) are gone for good.  In other words, if you come back after a long vacation, you can still recover old deleted items up until the point where a pinned item or active item is deleted.  The created time is not taken into account:  only the deleted date is used to determine if an entry should be permanently deleted.
 
 At present, there is no way to specifically remove individual deleted items forever through the website other than waiting for them to cycle out on their own.  Free yourself from the tyranny of manually managing your history!  Let things cycle out on their own.
