@@ -23,6 +23,7 @@ import java.beans.Encoder;
 
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
+import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
@@ -67,10 +68,13 @@ public class PasteBin {
 	private static final long ONE_DAY_IN_MS = 24 * 60 * 60 * 1000;
 	private static final long KEEP_TIME_IN_MS = ONE_DAY_IN_MS * DEFAULT_MAX_KEEP_DELETED_DAYS;
 
+	private static final String SAVE_FILENAME = ".pastebin";
+	private static final String DEFAULT_INET_SEARCH = "192.168.";
+
 	private static final QuerySplit querySplit = new QuerySplit();
 
 	private SimpleDateFormat dateFormatter = new SimpleDateFormat("'<nobr>'yyyy-MM-dd'</nobr> <nobr>'HH:mm:ss'</nobr>'");
- 	private String saveLocation;
+ 	private File saveFile;
 	private HttpServer httpServer;
 	private List<HistoryEntry> historyList;
 	private List<HistoryEntry> pinnedHistoryList;
@@ -78,8 +82,12 @@ public class PasteBin {
 
 	private int maxMainEntries, maxKeepDeletedDays;
 
-	public PasteBin(String saveLocation, String interfaceSpec) throws UnknownHostException, IOException {
-		this.saveLocation = saveLocation;
+	public String getAddressFullDisplay(NetworkInterface netInterface, InetAddress address) {
+		return netInterface.getName() + " / " + netInterface.getDisplayName() + " / " + address.getHostAddress();
+	}
+
+	public PasteBin(File saveFile, String interfaceSpec) throws UnknownHostException, IOException, IllegalArgumentException {
+		this.saveFile = saveFile;
 		this.historyList = new ArrayList<>();
 		this.pinnedHistoryList = new ArrayList<>();
 		this.deletedHistoryList = new ArrayList<>();
@@ -89,6 +97,7 @@ public class PasteBin {
 		Thread saveHook = new Thread(() -> save());
 		Runtime.getRuntime().addShutdownHook(saveHook);
 
+		List<InetAddress> foundInterfaceList = new ArrayList<>();
 		InetAddress foundInterface = null;
 		Enumeration interfaceEnum = NetworkInterface.getNetworkInterfaces();
 		while(interfaceEnum.hasMoreElements()) {
@@ -97,18 +106,29 @@ public class PasteBin {
 			while(addressesEnum.hasMoreElements())
 			{
 				InetAddress address = (InetAddress) addressesEnum.nextElement();
-				System.out.println(netInterface.getName() + " / " + netInterface.getDisplayName() + " / " +
-						address.getHostAddress());
+				String addressFullDisplay = getAddressFullDisplay(netInterface, address);
+				System.out.println(addressFullDisplay);
 
-				if (address.getHostAddress().equals(interfaceSpec)) {
-					foundInterface = address;
+				if (addressFullDisplay.indexOf(interfaceSpec) > -1) {
+					foundInterfaceList.add(address);
 				}
 			}
 		}
 
-		if (foundInterface == null) {
+		if (foundInterfaceList.size() == 0) {
 			System.err.println("No match for interface " + interfaceSpec);
-			return;
+			throw new IllegalArgumentException();
+		}
+		else if (foundInterfaceList.size() == 1) {
+			foundInterface = foundInterfaceList.get(0);
+		}
+		else if (foundInterfaceList.size() > 1) {
+			System.err.println();
+			System.err.println("Too many matches for interface " + interfaceSpec + ":");
+			for (InetAddress interfaceEntry : foundInterfaceList) {
+				System.out.println(interfaceEntry.getHostAddress());
+			}
+			throw new IllegalArgumentException();
 		}
 
 		System.out.println("Listening for connections to:  " + foundInterface + ".");
@@ -125,13 +145,29 @@ public class PasteBin {
 	}
 
 	public static void main(String[] args) throws IOException {
-		if (args.length != 2) {
-			System.out.println("This program takes two arguments:  the location of the save file and the interface name or IP to listen on.");
+		File storageFile = new File(System.getProperty("user.home"), SAVE_FILENAME);
+		System.out.println(storageFile.getAbsolutePath());
+
+		if (args.length > 1) {
+			System.out.println("This program takes zero or one argument:  the interface name or IP to listen on.");
 			return;
 		}
 
-		PasteBin pasteBin = new PasteBin(args[0], args[1]);
-		pasteBin.httpServer.start();
+		String inetSearch;
+		if (args.length == 0) {
+			inetSearch = DEFAULT_INET_SEARCH;
+		}
+		else {
+			inetSearch = args[0];
+		}
+
+		try {
+			PasteBin pasteBin = new PasteBin(storageFile, inetSearch);
+			pasteBin.httpServer.start();
+		}
+		catch (IllegalArgumentException e) {
+			// We already printed out an error.
+		}
 	}
 
 	private void sendResponseHeadersOK(HttpExchange he) throws IOException {
@@ -591,7 +627,7 @@ public class PasteBin {
 	}
 
 	private void save() {
-		if (saveLocation == null) {
+		if (saveFile == null) {
 			System.out.println("Not saving:  no save location.");
 			return;
 		}
@@ -607,7 +643,7 @@ public class PasteBin {
 		saveHistory(pinnedHistoryList, props, "pinnedHistory");
 		saveHistory(deletedHistoryList, props, "deletedHistory");
 
-		try (OutputStream os = new FileOutputStream(saveLocation)) {
+		try (OutputStream os = new FileOutputStream(saveFile)) {
 			props.store(os, "Storage File for PasteBin.java");
 		}
 		catch (IOException e) {
@@ -637,11 +673,11 @@ public class PasteBin {
 	private void load() {
 		System.out.println("Loading.");
 		Properties props = new Properties();
-		try (InputStream is = new FileInputStream(saveLocation)) {
+		try (InputStream is = new FileInputStream(saveFile)) {
 			props.load(is);
 		}
 		catch (FileNotFoundException e) {
-			System.err.println("Unable to load configuration file '" + saveLocation + "'.");
+			System.err.println("Unable to load configuration file '" + saveFile.getAbsolutePath() + "'.");
 			props = null;
 			setDefaults(props);
 			return;
