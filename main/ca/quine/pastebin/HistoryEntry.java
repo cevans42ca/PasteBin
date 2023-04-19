@@ -24,6 +24,7 @@ public class HistoryEntry {
 	private Date deletedDate;
 	private UUID uuid;
 	private String text;
+	private String shortUrl;
 
 	public HistoryEntry(String text) {
 		this(text, new Date());
@@ -64,6 +65,14 @@ public class HistoryEntry {
 
 	public UUID getUuid() {
 		return uuid;
+	}
+
+	public void setShortUrl(String shortUrl) {
+		this.shortUrl = shortUrl;
+	}
+
+	public String getShortUrl() {
+		return shortUrl;
 	}
 
 }

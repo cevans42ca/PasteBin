@@ -19,8 +19,6 @@ import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpServer;
 import com.sun.net.httpserver.Headers;
 
-import java.beans.Encoder;
-
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.File;
@@ -39,8 +37,6 @@ import java.nio.charset.StandardCharsets;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.NetworkInterface;
-import java.net.ServerSocket;
-import java.net.Socket;
 import java.net.URI;
 import java.net.UnknownHostException;
 
@@ -49,6 +45,7 @@ import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.Enumeration;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.ListIterator;
@@ -56,7 +53,6 @@ import java.util.Map;
 import java.util.Properties;
 import java.util.UUID;
 
-import org.apache.commons.codec.net.URLCodec;
 import org.apache.commons.text.StringEscapeUtils;
 
 
@@ -142,6 +138,8 @@ public class PasteBin {
 		this.httpServer.createContext("/undelete", (he) -> undeleteContextHandler(he));
 		this.httpServer.createContext("/deletePin", (he) -> deletePinContextHandler(he));
 		this.httpServer.createContext("/viewDeleted", (he) -> viewDeletedContextHandler(he));
+		this.httpServer.createContext("/shortUrls", (he) -> shortUrls(he));
+		this.httpServer.createContext("/updateShortUrls", (he) -> updateShortUrls(he));
 	}
 
 	public static void main(String[] args) throws IOException {
@@ -177,8 +175,27 @@ public class PasteBin {
 
 	private void rootContextHandler(HttpExchange he) {
 		try {
-			String requestMethod = he.getRequestMethod();
-			Headers requestHeaders = he.getRequestHeaders();
+			String requestPath = he.getRequestURI().getPath();
+			if (requestPath.startsWith("/") && !requestPath.equals("/")) {
+				requestPath = requestPath.substring(1);
+
+				for (HistoryEntry entry : pinnedHistoryList) {
+					if (requestPath.equals(entry.getShortUrl())) {
+						System.out.println("Found " + entry.getText());
+						sendText(he, entry.getText());
+						return;
+					}
+				}
+
+				for (HistoryEntry entry : historyList) {
+					if (requestPath.equals(entry.getShortUrl())) {
+						System.out.println("Found " + entry.getText());
+						sendText(he, entry.getText());
+						return;
+					}
+				}
+			}
+
 			InputStream is = he.getRequestBody();
 			String line = null;
 			try (BufferedReader br = new BufferedReader(new InputStreamReader(is))) {
@@ -197,6 +214,16 @@ public class PasteBin {
 		}
 		catch (IOException e) {
 			e.printStackTrace();
+		}
+	}
+
+	private void sendText(HttpExchange he, String text) throws IOException {
+		he.sendResponseHeaders(200, 0);
+		he.getResponseHeaders().set("Content-Type", "text/plain; charset=utf-8");
+
+		OutputStream os = he.getResponseBody();
+		try (BufferedWriter bw = new BufferedWriter(new OutputStreamWriter(os))) {
+			bw.write(text);
 		}
 	}
 
@@ -262,6 +289,8 @@ public class PasteBin {
 		bw.write("<input type='submit'>");
 		bw.write("</form>");
 		bw.write("<p><a href='/viewDeleted'>View Deleted</a></p>");
+		bw.write("<p></p>");
+		bw.write("<p><a href='/shortUrls'>View/Edit Short URLs</a></p>");
 	}
 
 	private void writeActiveHistory(BufferedWriter bw) throws IOException {
@@ -299,9 +328,17 @@ public class PasteBin {
 	}
 
 	private void writeHistory(BufferedWriter bw, List<HistoryEntry> genericHistoryList, HistorySnippetWriter hsw) throws IOException {
+		writeHistory(bw, genericHistoryList, hsw, null);
+	}
+
+	private void writeHistory(BufferedWriter bw, List<HistoryEntry> genericHistoryList, HistorySnippetWriter hsw, String header) throws IOException {
 		if (!genericHistoryList.isEmpty()) {
 			synchronized(dateFormatter) {
 				bw.write("<table border='1' width='100%'>");
+				if (header != null) {
+					bw.write(header);
+				}
+
 				int index = 0;
 				for (HistoryEntry entry : genericHistoryList) {
 					bw.write("<tr><td id='text" + entry.getUuid() + "' class='top'>" + entry.getText() + "</td>");
@@ -610,17 +647,23 @@ public class PasteBin {
 	}
 
 	private void writePage(BufferedWriter bw) throws IOException {
-		writePage(bw, null);
+		writePage(bw, null, null);
 	}
 
-	private void writePage(BufferedWriter bw, String errorMessage) throws IOException {
+	private void writePage(BufferedWriter bw, String errorMessage, String infoMessage) throws IOException {
 		writeHeader(bw);
 		bw.write("<body>");
 		writePinnedHistory(bw);
 		writeForm(bw);
+
 		if (errorMessage != null) {
 			bw.write("<p><span style='color: #f00'>" + errorMessage + "</span></p>");
 		}
+
+		if (infoMessage != null) {
+			bw.write("<p><span style='color: #0d0'>" + infoMessage + "</span></p>");
+		}
+
 		writeActiveHistory(bw);
 		bw.write("</body>");
 		bw.write("</html>");
@@ -799,13 +842,14 @@ public class PasteBin {
 
 		OutputStream os = he.getResponseBody();
 		try (BufferedWriter bw = new BufferedWriter(new OutputStreamWriter(os))) {
-			writePage(bw, errorMessage);
+			writePage(bw, errorMessage, null);
 		}
 	}
 
 	private Map<String, List<String>> handlePost(HttpExchange he) throws IOException {
 		String requestMethod = he.getRequestMethod();
 		if (!"POST".equals(requestMethod)) {
+			System.out.println("Request method " + requestMethod + " is not allowed for updating.");
 			sendErrorResponse(he, 400, "Only POST is allowed for updating.");
 
 			return null;
@@ -848,6 +892,10 @@ public class PasteBin {
 		return "<form action='" + action + "' method='POST'><input type='hidden' name='id' value='" + uuid.toString() + "'><input type='submit' value='" + submitValue + "'></form>";
 	}
 
+	private String input(UUID uuid, String value) {
+		return "<input type='text' name='shortUrl" + uuid.toString() + "' value='" + (value==null ? "" : value) + "'>";
+	}
+
 	private void addAndManageDeletedHistoryList(HistoryEntry newEntry) {
 		deletedHistoryList.add(0, newEntry);
 
@@ -864,6 +912,111 @@ public class PasteBin {
 			else {
 				break;
 			}
+		}
+	}
+
+	private void shortUrls(HttpExchange he) {
+		try {
+			String requestMethod = he.getRequestMethod();
+			Headers requestHeaders = he.getRequestHeaders();
+			InputStream is = he.getRequestBody();
+			String line = null;
+			try (BufferedReader br = new BufferedReader(new InputStreamReader(is))) {
+				while ((line = br.readLine()) != null) {
+					System.out.println(line);
+				}
+			}
+
+			// getResponseHeaders
+			sendResponseHeadersOK(he);
+
+			OutputStream os = he.getResponseBody();
+			try (BufferedWriter bw = new BufferedWriter(new OutputStreamWriter(os))) {
+				writeHeader(bw);
+				bw.write("<body>");
+
+				bw.write("<form action='/updateShortUrls' method='POST'>");
+
+				HistorySnippetWriter hsw = (entry) ->  {
+					bw.write(td("center", input(entry.getUuid(), entry.getShortUrl())));
+					bw.write(td("top", dateFormatter.format(entry.getCreateDate())));
+				};
+
+				String header = "<tr><th>Text</th><th>Short URL</th><th>Created Date</th></tr>";
+
+				bw.write("<h2>Pinned Items</h2>");
+				writeHistory(bw, pinnedHistoryList, hsw, header);
+				bw.write("<input type='submit'>");
+
+				bw.write("<h2>Unpinned Items</h2>");
+				writeHistory(bw, historyList, hsw, header);
+				bw.write("<input type='submit'>");
+
+				bw.write("</form>");
+
+				bw.write("</body>");
+				bw.write("</html>");
+			}
+		}
+		catch (IOException e) {
+			e.printStackTrace();
+		}
+	}
+
+	private void updateShortUrls(HttpExchange he) {
+		try {
+			Map<String, List<String>> queryMap = handlePost(he);
+
+			if (queryMap == null) {
+				return;
+			}
+
+			HashMap<UUID, HistoryEntry> entryMap = new HashMap<>();
+			
+			for (HistoryEntry entry : pinnedHistoryList) {
+				entryMap.put(entry.getUuid(), entry);
+			}
+
+			for (HistoryEntry entry : historyList) {
+				entryMap.put(entry.getUuid(), entry);
+			}
+
+			int count = 0;
+			for (Map.Entry<String, List<String>> entry : queryMap.entrySet()) {
+				if (!entry.getKey().startsWith("shortUrl")) {
+					continue;
+				}
+
+				String bareKey = entry.getKey().substring("shortUrl".length());
+				HistoryEntry historyEntry = entryMap.get(UUID.fromString(bareKey));
+
+				if (historyEntry == null) {
+					continue;
+				}
+
+				if (entry.getValue() != null && entry.getValue().size() == 1) {
+					String simpleValue = entry.getValue().get(0);
+					if (simpleValue.length() > 0) {
+						System.out.println(entry.getKey() + "=" + simpleValue);
+						historyEntry.setShortUrl(simpleValue);
+						count++;
+					}
+					else {
+						historyEntry.setShortUrl("");
+					}
+				}
+			}
+
+			// getResponseHeaders
+			sendResponseHeadersOK(he);
+
+			OutputStream os = he.getResponseBody();
+			try (BufferedWriter bw = new BufferedWriter(new OutputStreamWriter(os))) {
+				writePage(bw, null, "Number of short URLs set (total):  " + count + ".");
+			}
+		}
+		catch (IOException e) {
+			e.printStackTrace();
 		}
 	}
 

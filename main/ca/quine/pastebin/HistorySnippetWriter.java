@@ -15,7 +15,6 @@ package ca.quine.pastebin;
 
 // Copyright (C) 2022 Christopher Evans
 
-import java.io.BufferedWriter;
 import java.io.IOException;
 
 public interface HistorySnippetWriter {

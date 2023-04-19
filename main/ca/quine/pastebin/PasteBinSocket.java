@@ -26,15 +26,16 @@ import java.io.OutputStreamWriter;
 import java.net.ServerSocket;
 import java.net.Socket;
 
-public class PasteBin {
+public class PasteBinSocket {
 
 	public static void main(String[] args) throws IOException {
-		ServerSocket ss = new ServerSocket(8080);
-
-		while (true) {
-			Socket s = ss.accept();
-			Thread t = new Thread(() -> { accept(s); });
-			t.start();
+		try (ServerSocket ss = new ServerSocket(8080)) {
+	
+			while (true) {
+				Socket s = ss.accept();
+				Thread t = new Thread(() -> { accept(s); });
+				t.start();
+			}
 		}
 	}
 
@@ -45,7 +46,6 @@ public class PasteBin {
 			BufferedReader br = new BufferedReader(new InputStreamReader(is));
 			String firstLine = null;
 			String line = null;
-			int blankLines = 0;
 			while ((line = br.readLine()) != null) {
 				if (firstLine == null) {
 					firstLine = line;
