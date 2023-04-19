@@ -43,6 +43,14 @@ public class HistoryEntry {
 		this.uuid = uuid;
 	}
 
+	public HistoryEntry(String text, Date createDate, Date deletedDate, UUID uuid, String shortUrl) {
+		this.text = text;
+		this.createDate = createDate;
+		this.deletedDate = deletedDate;
+		this.uuid = uuid;
+		this.shortUrl = shortUrl;
+	}
+
 	public Date getCreateDate() {
 		return createDate;
 	}

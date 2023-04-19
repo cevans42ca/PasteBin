@@ -706,6 +706,10 @@ public class PasteBin {
 					"" + entry.getDeletedDate().getTime());
 			}
 
+			if (entry.getShortUrl() != null) {
+				props.setProperty(prefix + "." + index + ".shortUrl", entry.getShortUrl());
+			}
+
 			props.setProperty(prefix + "." + index + ".uuid",
 				"" + entry.getUuid().toString());
 
@@ -788,7 +792,9 @@ public class PasteBin {
 			UUID uuid = convertToUUID(props.getProperty(
 				prefix + "." + index + ".uuid"));
 
-			historyList.add(new HistoryEntry(text, createDate, deletedDate, uuid));
+			String shortUrl = props.getProperty(prefix + "." + index + ".shortUrl", null);
+
+			historyList.add(new HistoryEntry(text, createDate, deletedDate, uuid, shortUrl));
 
 			index++;
 		}
