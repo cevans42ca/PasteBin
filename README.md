@@ -1,10 +1,12 @@
+This project will let you easily copy and paste text between computers on the same network without it going to the internet.
+
 # Bare Minimum PasteBin
 
-This project is intended for very specific circumstances.
+This project may be useful to you if all of the following are true.
 
-* You're headed to the cottage, or somewhere with a good WiFi router but spotty internet.
+* You're headed to the cottage, or somewhere with a good WiFi router but spotty internet (OR) You want to copy and paste text between computers without it going to the internet but you're OK with it being unsecured on the local network.
 * You want to be able to copy and paste snippets of text (not Rich Text) between your devices.
-* You have a web browser of some kind on all devices you want to copy text from/to, and a shared clipboard.  (Sorry, PS4 fans.)
+* You have a web browser of some kind on all devices you want to copy text from/to, and a shared OS clipboard.  (Sorry, PS4 fans.)
 * There's going to be a computer there, or at least something capable of getting and running a Java 1.8 (or later) program.  (JDK 1.8 was released March 2014.)
 * You're able to prepare before you head up, or download something small (1 MB) at an opportune time.
 * The WiFi is trusted, and you're not copying anything confidential, so you don't need any kind of security or authentication.
@@ -23,4 +25,4 @@ Using the website shouldn't require any instructions, but the following details 
 
 There is a limit of 20 active items.  When you hit the limit, the oldest entry is moved to the deleted list.  Whenever the deleted list is changed, any items that were deleted more than 32 days ago (the longest month plus one day) are gone for good.  In other words, if you come back after a long vacation, you can still recover old deleted items up until the point where a pinned item or active item is deleted.  The created time is not taken into account:  only the deleted date is used to determine if an entry should be permanently deleted.
 
-At present, there is no way to specifically remove individual deleted items forever through the website other than waiting for them to cycle out on their own.  Free yourself from the tyranny of manually managing your history!  Let things cycle out on their own.
+At present, there is no way to specifically remove individual deleted items forever through the website other than waiting for them to cycle out on their own.  Free yourself from the tyranny of manually managing your history!  Let things cycle out on their own.  Don't use this utility to copy passwords.
