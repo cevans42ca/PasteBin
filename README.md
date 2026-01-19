@@ -1,5 +1,3 @@
-This project will let you easily copy and paste text between computers on the same network without it going to the internet.
-
 # Bare Minimum PasteBin
 
 This project may be useful to you if all of the following are true.
