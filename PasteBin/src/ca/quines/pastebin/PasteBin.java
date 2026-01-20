@@ -31,7 +31,7 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.io.OutputStreamWriter;
 import java.io.Reader;
-
+import java.io.Writer;
 import java.nio.charset.StandardCharsets;
 
 import java.net.InetAddress;
@@ -167,13 +167,34 @@ public class PasteBin {
 			inetSearch = args[0];
 		}
 
+		PasteBin pasteBin = null;
 		try {
-			PasteBin pasteBin = new PasteBin(storageFile, inetSearch);
+			pasteBin = new PasteBin(storageFile, inetSearch);
 			pasteBin.httpServer.start();
 		}
 		catch (IllegalArgumentException e) {
 			// We already printed out an error.
+			return;
 		}
+
+		// Ctrl+C works at the console, but not in Eclipse.  Allow a shutdown in Eclipse with "shutdown" at stdin.
+	    Thread consoleListener = new Thread(() -> {
+	        System.out.println("Console listener started. Type 'shutdown' to stop the server.");
+	        try (BufferedReader reader = new BufferedReader(new InputStreamReader(System.in))) {
+	            String line;
+	            while ((line = reader.readLine()) != null) {
+	                if ("shutdown".equalsIgnoreCase(line.trim())) {
+	                    System.out.println("Shutdown command received. Stopping server...");
+	                    System.exit(0); // This triggers the save() shutdown hook.
+	                    break;
+	                }
+	            }
+	        } catch (IOException e) {
+	            System.err.println("Error reading from console: " + e.getMessage());
+	        }
+	    });
+	    consoleListener.setDaemon(false); // Ensure this thread keeps the JVM alive
+	    consoleListener.start();
 	}
 
 	private void sendResponseHeadersOK(HttpExchange he) throws IOException {
@@ -183,7 +204,9 @@ public class PasteBin {
 
 	private void rootContextHandler(HttpExchange he) {
 		try {
+			String htmlResponse; // This will hold our prepared output
 			synchronized(dataLock) {
+				java.io.StringWriter sw = new java.io.StringWriter();
 				String requestPath = he.getRequestURI().getPath();
 				if (requestPath.startsWith("/") && !requestPath.equals("/")) {
 					requestPath = requestPath.substring(1);
@@ -191,7 +214,7 @@ public class PasteBin {
 					for (HistoryEntry entry : pinnedHistoryList) {
 						if (requestPath.equals(entry.getShortUrl())) {
 							System.out.println("Found " + entry.getText());
-							sendText(he, entry.getText());
+							sw.append(entry.getText());
 							return;
 						}
 					}
@@ -199,26 +222,29 @@ public class PasteBin {
 					for (HistoryEntry entry : historyList) {
 						if (requestPath.equals(entry.getShortUrl())) {
 							System.out.println("Found " + entry.getText());
-							sendText(he, entry.getText());
+							sw.append(entry.getText());
 							return;
 						}
 					}
 				}
 
-				InputStream is = he.getRequestBody();
-				String line = null;
-				try (BufferedReader br = new BufferedReader(new InputStreamReader(is))) {
-					while ((line = br.readLine()) != null) {
-						System.out.println(line);
-					}
-				}
+				writePage(sw);
+				htmlResponse = sw.toString();
+			}
 
-				sendResponseHeadersOK(he);
-
-				OutputStream os = he.getResponseBody();
-				try (BufferedWriter bw = new BufferedWriter(new OutputStreamWriter(os))) {
-					writePage(bw);
+			InputStream is = he.getRequestBody();
+			String line = null;
+			try (BufferedReader br = new BufferedReader(new InputStreamReader(is))) {
+				while ((line = br.readLine()) != null) {
+					System.out.println(line);
 				}
+			}
+
+			sendResponseHeadersOK(he);
+
+			OutputStream os = he.getResponseBody();
+			try (BufferedWriter bw = new BufferedWriter(new OutputStreamWriter(os))) {
+				bw.write(htmlResponse);
 			}
 		}
 		catch (IOException e) {
@@ -226,17 +252,7 @@ public class PasteBin {
 		}
 	}
 
-	private void sendText(HttpExchange he, String text) throws IOException {
-		he.sendResponseHeaders(200, 0);
-		he.getResponseHeaders().set("Content-Type", "text/plain; charset=utf-8");
-
-		OutputStream os = he.getResponseBody();
-		try (BufferedWriter bw = new BufferedWriter(new OutputStreamWriter(os))) {
-			bw.write(text);
-		}
-	}
-
-	private void writeHeader(BufferedWriter bw) throws IOException {
+	private void writeHeader(Writer bw) throws IOException {
 		bw.write("<html><head>");
 		bw.write("<meta charset='UTF-8' name='viewport' content='width=640' initial-scale=1>");
 		bw.write("<style>");
@@ -244,53 +260,53 @@ public class PasteBin {
 		bw.write("    background-color: #CEE8FF;");
 		bw.write("    color: #000;");
 		bw.write("  }");
-		bw.newLine();
+		bw.write("\r\n");
 		bw.write("  td.top {");
 		bw.write("    vertical-align: top;");
 		bw.write("  }");
-		bw.newLine();
+		bw.write("\r\n");
 		bw.write("  td.center {");
 		bw.write("    text-align: center;");
 		bw.write("    vertical-align: middle;");
 		bw.write("  }");
-		bw.newLine();
+		bw.write("\r\n");
 		bw.write("  td input[type=button] {");
 		bw.write("    vertical-align: middle;");
 		bw.write("  }");
-		bw.newLine();
+		bw.write("\r\n");
 		bw.write("</style>");
 		bw.write("<title>PasteBin</title>");
-		bw.newLine();
+		bw.write("\r\n");
 		bw.write("<script>");
-		bw.newLine();
+		bw.write("\r\n");
 		bw.write("	function submitForm() {");
-		bw.newLine();
+		bw.write("\r\n");
 		bw.write("		if (document.getElementById('fixPercent')) {");
-		bw.newLine();
+		bw.write("\r\n");
 		bw.write("			var str = document.getElementById('text').value; ");
-		bw.newLine();
+		bw.write("\r\n");
 		bw.write("			var replaced = str.replace(/%/g, '%25');");
-		bw.newLine();
+		bw.write("\r\n");
 		bw.write("			document.getElementById('text').value = replaced;");
-		bw.newLine();
+		bw.write("\r\n");
 		bw.write("		}");
-		bw.newLine();
+		bw.write("\r\n");
 		bw.write("		return true;");
-		bw.newLine();
+		bw.write("\r\n");
 		bw.write("	}");
-		bw.newLine();
+		bw.write("\r\n");
 		bw.write("</script>");
-		bw.newLine();
+		bw.write("\r\n");
 		bw.write("</head>");
 	}
 
-	private void writeForm(BufferedWriter bw) throws IOException {
+	private void writeForm(Writer bw) throws IOException {
 		bw.write("<form method=\"POST\" action=\"/paste\" enctype=\"application/x-www-form-urlencoded\" onclick='submitForm()'>");
-		bw.newLine();
+		bw.write("\r\n");
 		bw.write("<textarea name='text' id='text' style='width: 100%' rows='5' cols='80' autofocus>");
 		bw.write("</textarea>");
 		bw.write("<br>");
-		bw.newLine();
+		bw.write("\r\n");
 		bw.write("<input type='checkbox' id='fixPercent' name='fixPercent' checked='true' value='true'>");
 		bw.write("<label for='fixPercent'>Manually Fix Percent</label><br>");
 		bw.write("<input type='checkbox' id='preformatted' name='preformatted' checked='true' value='true'>");
@@ -302,14 +318,14 @@ public class PasteBin {
 		bw.write("<p><a href='/shortUrls'>View/Edit Short URLs</a></p>");
 	}
 
-	private void writeActiveHistory(BufferedWriter bw) throws IOException {
+	private void writeActiveHistory(Writer writer) throws IOException {
 		HistorySnippetWriter hsw = (entry) ->  {
-			bw.write(td("center", form("/pin", entry.getUuid(), "Pin")));
-			bw.write(td("center", form("/delete", entry.getUuid(), "Delete")));
-			bw.write(td("top", dateFormatter.format(entry.getCreateDate())));
+			writer.write(td("center", form("/pin", entry.getUuid(), "Pin")));
+			writer.write(td("center", form("/delete", entry.getUuid(), "Delete")));
+			writer.write(td("top", dateFormatter.format(entry.getCreateDate())));
 		};
 
-		writeHistory(bw, historyList, hsw);
+		writeHistory(writer, historyList, hsw);
 	}
 
 	private void writeDeletedHistory(BufferedWriter bw) throws IOException {
@@ -329,7 +345,7 @@ public class PasteBin {
 		}
 	}
 
-	private void writePinnedHistory(BufferedWriter bw) throws IOException {
+	private void writePinnedHistory(Writer bw) throws IOException {
 		HistorySnippetWriter hsw = (entry) ->  {
 			bw.write(td("center", form("/deletePin", entry.getUuid(), "Delete")));
 			bw.write(td("top", dateFormatter.format(entry.getCreateDate())));
@@ -338,11 +354,11 @@ public class PasteBin {
 		writeHistory(bw, pinnedHistoryList, hsw);
 	}
 
-	private void writeHistory(BufferedWriter bw, List<HistoryEntry> genericHistoryList, HistorySnippetWriter hsw) throws IOException {
+	private void writeHistory(Writer bw, List<HistoryEntry> genericHistoryList, HistorySnippetWriter hsw) throws IOException {
 		writeHistory(bw, genericHistoryList, hsw, null);
 	}
 
-	private void writeHistory(BufferedWriter bw, List<HistoryEntry> genericHistoryList, HistorySnippetWriter hsw, String header) throws IOException {
+	private void writeHistory(Writer bw, List<HistoryEntry> genericHistoryList, HistorySnippetWriter hsw, String header) throws IOException {
 		synchronized(dataLock) {
 			if (!genericHistoryList.isEmpty()) {
 				bw.write("<table border='1' width='100%'>");
@@ -664,27 +680,27 @@ public class PasteBin {
 		}
 	}
 
-	private void writePage(BufferedWriter bw) throws IOException {
-		writePage(bw, null, null);
+	private void writePage(Writer writer) throws IOException {
+		writePage(writer, null, null);
 	}
 
-	private void writePage(BufferedWriter bw, String errorMessage, String infoMessage) throws IOException {
-		writeHeader(bw);
-		bw.write("<body>");
-		writePinnedHistory(bw);
-		writeForm(bw);
+	private void writePage(Writer writer, String errorMessage, String infoMessage) throws IOException {
+		writeHeader(writer);
+		writer.write("<body>");
+		writePinnedHistory(writer);
+		writeForm(writer);
 
 		if (errorMessage != null) {
-			bw.write("<p><span style='color: #f00'>" + errorMessage + "</span></p>");
+			writer.write("<p><span style='color: #f00'>" + errorMessage + "</span></p>");
 		}
 
 		if (infoMessage != null) {
-			bw.write("<p><span style='color: #0d0'>" + infoMessage + "</span></p>");
+			writer.write("<p><span style='color: #0d0'>" + infoMessage + "</span></p>");
 		}
 
-		writeActiveHistory(bw);
-		bw.write("</body>");
-		bw.write("</html>");
+		writeActiveHistory(writer);
+		writer.write("</body>");
+		writer.write("</html>");
 	}
 
 	private void save() {
