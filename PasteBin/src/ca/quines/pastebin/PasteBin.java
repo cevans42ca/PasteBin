@@ -206,7 +206,7 @@ public class PasteBin {
 	private void rootContextHandler(HttpExchange he) {
 		try {
 			String htmlResponse; // This will hold our prepared output
-			synchronized(dataLock) {
+			OUTER: synchronized(dataLock) {
 				java.io.StringWriter sw = new java.io.StringWriter();
 				String requestPath = he.getRequestURI().getPath();
 				if (requestPath.startsWith("/") && !requestPath.equals("/")) {
@@ -215,16 +215,16 @@ public class PasteBin {
 					for (HistoryEntry entry : pinnedHistoryList) {
 						if (requestPath.equals(entry.getShortUrl())) {
 							System.out.println("Found " + entry.getText());
-							sw.append(entry.getText());
-							return;
+							htmlResponse = entry.getText();
+							break OUTER;
 						}
 					}
 
 					for (HistoryEntry entry : historyList) {
 						if (requestPath.equals(entry.getShortUrl())) {
 							System.out.println("Found " + entry.getText());
-							sw.append(entry.getText());
-							return;
+							htmlResponse = entry.getText();
+							break OUTER;
 						}
 					}
 				}
@@ -446,6 +446,7 @@ public class PasteBin {
 
 	private void deleteContextHandler(HttpExchange he) {
 		try {
+			String htmlResponse = null;
 			synchronized(dataLock) {
 				Map<String, List<String>> queryMap = handlePost(he);
 
@@ -474,21 +475,25 @@ public class PasteBin {
 					}
 				}
 
-				// Headers requestHeaders = he.getRequestHeaders();
-				InputStream is = he.getRequestBody();
-				String line = null;
-				try (BufferedReader br = new BufferedReader(new InputStreamReader(is))) {
-					while ((line = br.readLine()) != null) {
-						System.out.println(line);
-					}
-				}
+				StringWriter sw = new StringWriter();
+				writePage(sw);
+				htmlResponse = sw.toString();
+			}
 
-				// getResponseHeaders
-				sendResponseHeadersOK(he);
-				OutputStream os = he.getResponseBody();
-				try (BufferedWriter bw = new BufferedWriter(new OutputStreamWriter(os))) {
-					writePage(bw);
+			// Headers requestHeaders = he.getRequestHeaders();
+			InputStream is = he.getRequestBody();
+			String line = null;
+			try (BufferedReader br = new BufferedReader(new InputStreamReader(is))) {
+				while ((line = br.readLine()) != null) {
+					System.out.println(line);
 				}
+			}
+
+			// getResponseHeaders
+			sendResponseHeadersOK(he);
+			OutputStream os = he.getResponseBody();
+			try (BufferedWriter bw = new BufferedWriter(new OutputStreamWriter(os))) {
+				bw.write(htmlResponse);
 			}
 		}
 		catch (IOException e) {
@@ -971,10 +976,10 @@ public class PasteBin {
 						System.out.println(line);
 					}
 				}
-	
+
 				// getResponseHeaders
 				sendResponseHeadersOK(he);
-	
+
 				OutputStream os = he.getResponseBody();
 				try (BufferedWriter bw = new BufferedWriter(new OutputStreamWriter(os))) {
 					writeHeader(bw);
