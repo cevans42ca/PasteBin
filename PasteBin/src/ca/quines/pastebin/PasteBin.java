@@ -489,7 +489,6 @@ public class PasteBin {
 				}
 			}
 
-			// getResponseHeaders
 			sendResponseHeadersOK(he);
 			OutputStream os = he.getResponseBody();
 			try (BufferedWriter bw = new BufferedWriter(new OutputStreamWriter(os))) {
@@ -503,6 +502,7 @@ public class PasteBin {
 
 	private void undeleteContextHandler(HttpExchange he) {
 		try {
+			String htmlResponse = null;
 			synchronized(dataLock) {
 				Map<String, List<String>> queryMap = handlePost(he);
 	
@@ -531,22 +531,25 @@ public class PasteBin {
 						// Fall through and return the usual response.
 					}
 				}
-	
-				// Headers requestHeaders = he.getRequestHeaders();
-				InputStream is = he.getRequestBody();
-				String line = null;
-				try (BufferedReader br = new BufferedReader(new InputStreamReader(is))) {
-					while ((line = br.readLine()) != null) {
-						System.out.println(line);
-					}
+
+				StringWriter sw = new StringWriter();
+				writePage(sw);
+				htmlResponse = sw.toString();
+			}
+
+			// Headers requestHeaders = he.getRequestHeaders();
+			InputStream is = he.getRequestBody();
+			String line = null;
+			try (BufferedReader br = new BufferedReader(new InputStreamReader(is))) {
+				while ((line = br.readLine()) != null) {
+					System.out.println(line);
 				}
-	
-				// getResponseHeaders
-				sendResponseHeadersOK(he);
-				OutputStream os = he.getResponseBody();
-				try (BufferedWriter bw = new BufferedWriter(new OutputStreamWriter(os))) {
-					writePage(bw);
-				}
+			}
+
+			sendResponseHeadersOK(he);
+			OutputStream os = he.getResponseBody();
+			try (BufferedWriter bw = new BufferedWriter(new OutputStreamWriter(os))) {
+				bw.write(htmlResponse);
 			}
 		}
 		catch (IOException e) {
@@ -556,6 +559,7 @@ public class PasteBin {
 
 	private void deletePinContextHandler(HttpExchange he) {
 		try {
+			String htmlResponse = null;
 			synchronized(dataLock) {
 				Map<String, List<String>> queryMap = handlePost(he);
 
@@ -584,21 +588,24 @@ public class PasteBin {
 					}
 				}
 
-				// Headers requestHeaders = he.getRequestHeaders();
-				InputStream is = he.getRequestBody();
-				String line = null;
-				try (BufferedReader br = new BufferedReader(new InputStreamReader(is))) {
-					while ((line = br.readLine()) != null) {
-						System.out.println(line);
-					}
-				}
+				StringWriter sw = new StringWriter();
+				writePage(sw);
+				htmlResponse = sw.toString();
+			}
 
-				// getResponseHeaders
-				sendResponseHeadersOK(he);
-				OutputStream os = he.getResponseBody();
-				try (BufferedWriter bw = new BufferedWriter(new OutputStreamWriter(os))) {
-					writePage(bw);
+			// Headers requestHeaders = he.getRequestHeaders();
+			InputStream is = he.getRequestBody();
+			String line = null;
+			try (BufferedReader br = new BufferedReader(new InputStreamReader(is))) {
+				while ((line = br.readLine()) != null) {
+					System.out.println(line);
 				}
+			}
+
+			sendResponseHeadersOK(he);
+			OutputStream os = he.getResponseBody();
+			try (BufferedWriter bw = new BufferedWriter(new OutputStreamWriter(os))) {
+				bw.write(htmlResponse);
 			}
 		}
 		catch (IOException e) {
@@ -608,13 +615,14 @@ public class PasteBin {
 
 	private void pinContextHandler(HttpExchange he) {
 		try {
+			String htmlResponse = null;
 			synchronized(dataLock) {
 				Map<String, List<String>> queryMap = handlePost(he);
-	
+
 				if (queryMap == null) {
 					return;
 				}
-	
+
 				List<String> idValue = queryMap.get("id");
 				if (idValue != null && idValue.size() == 1) {
 					try {
@@ -634,22 +642,25 @@ public class PasteBin {
 						// Fall through and return the usual response.
 					}
 				}
-	
-				// Headers requestHeaders = he.getRequestHeaders();
-				InputStream is = he.getRequestBody();
-				String line = null;
-				try (BufferedReader br = new BufferedReader(new InputStreamReader(is))) {
-					while ((line = br.readLine()) != null) {
-						System.out.println(line);
-					}
+
+				StringWriter sw = new StringWriter();
+				writePage(sw);
+				htmlResponse = sw.toString();
+			}
+
+			// Headers requestHeaders = he.getRequestHeaders();
+			InputStream is = he.getRequestBody();
+			String line = null;
+			try (BufferedReader br = new BufferedReader(new InputStreamReader(is))) {
+				while ((line = br.readLine()) != null) {
+					System.out.println(line);
 				}
-	
-				// getResponseHeaders
-				sendResponseHeadersOK(he);
-				OutputStream os = he.getResponseBody();
-				try (BufferedWriter bw = new BufferedWriter(new OutputStreamWriter(os))) {
-					writePage(bw);
-				}
+			}
+
+			sendResponseHeadersOK(he);
+			OutputStream os = he.getResponseBody();
+			try (BufferedWriter bw = new BufferedWriter(new OutputStreamWriter(os))) {
+				bw.write(htmlResponse);
 			}
 		}
 		catch (IOException e) {
