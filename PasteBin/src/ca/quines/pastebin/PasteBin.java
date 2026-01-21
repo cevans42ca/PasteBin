@@ -674,6 +674,18 @@ public class PasteBin {
 			URI requestUri = he.getRequestURI();
 			System.out.println(requestUri);
 
+			String htmlResponse = null;
+			synchronized(dataLock) {
+				StringWriter sw = new StringWriter();
+				writeHeader(sw);
+				sw.write("<body>");
+				sw.write("<p><a href='/'>Home</a></p>");
+				writeDeletedHistory(sw);
+				sw.write("</body>");
+				sw.write("</html>");
+				htmlResponse = sw.toString();
+			}
+
 			InputStream is = he.getRequestBody();
 			String line = null;
 			try (BufferedReader br = new BufferedReader(new InputStreamReader(is))) {
@@ -685,12 +697,7 @@ public class PasteBin {
 			sendResponseHeadersOK(he);
 			OutputStream os = he.getResponseBody();
 			try (BufferedWriter bw = new BufferedWriter(new OutputStreamWriter(os))) {
-				writeHeader(bw);
-				bw.write("<body>");
-				bw.write("<p><a href='/'>Home</a></p>");
-				writeDeletedHistory(bw);
-				bw.write("</body>");
-				bw.write("</html>");
+				bw.write(htmlResponse);
 			}
 		}
 		catch (IOException e) {
@@ -977,47 +984,53 @@ public class PasteBin {
 
 	private void shortUrls(HttpExchange he) {
 		try {
+			String htmlResponse = null;
 			synchronized(dataLock) {
 				// String requestMethod = he.getRequestMethod();
 				// Headers requestHeaders = he.getRequestHeaders();
-				InputStream is = he.getRequestBody();
-				String line = null;
-				try (BufferedReader br = new BufferedReader(new InputStreamReader(is))) {
-					while ((line = br.readLine()) != null) {
-						System.out.println(line);
-					}
-				}
 
-				// getResponseHeaders
-				sendResponseHeadersOK(he);
+				StringWriter sw = new StringWriter();
+				writeHeader(sw);
+				sw.write("<body>");
 
-				OutputStream os = he.getResponseBody();
-				try (BufferedWriter bw = new BufferedWriter(new OutputStreamWriter(os))) {
-					writeHeader(bw);
-					bw.write("<body>");
-	
-					bw.write("<form action='/updateShortUrls' method='POST'>");
-	
-					HistorySnippetWriter hsw = (entry) ->  {
-						bw.write(td("center", input(entry.getUuid(), entry.getShortUrl())));
-						bw.write(td("top", dateFormatter.format(entry.getCreateDate())));
-					};
-	
-					String header = "<tr><th>Text</th><th>Short URL</th><th>Created Date</th></tr>";
-	
-					bw.write("<h2>Pinned Items</h2>");
-					writeHistory(bw, pinnedHistoryList, hsw, header);
-					bw.write("<input type='submit'>");
-	
-					bw.write("<h2>Unpinned Items</h2>");
-					writeHistory(bw, historyList, hsw, header);
-					bw.write("<input type='submit'>");
-	
-					bw.write("</form>");
-	
-					bw.write("</body>");
-					bw.write("</html>");
+				sw.write("<form action='/updateShortUrls' method='POST'>");
+
+				HistorySnippetWriter hsw = (entry) ->  {
+					sw.write(td("center", input(entry.getUuid(), entry.getShortUrl())));
+					sw.write(td("top", dateFormatter.format(entry.getCreateDate())));
+				};
+
+				String header = "<tr><th>Text</th><th>Short URL</th><th>Created Date</th></tr>";
+
+				sw.write("<h2>Pinned Items</h2>");
+				writeHistory(sw, pinnedHistoryList, hsw, header);
+				sw.write("<input type='submit'>");
+
+				sw.write("<h2>Unpinned Items</h2>");
+				writeHistory(sw, historyList, hsw, header);
+				sw.write("<input type='submit'>");
+
+				sw.write("</form>");
+
+				sw.write("</body>");
+				sw.write("</html>");
+
+				htmlResponse = sw.toString();
+			}
+
+			InputStream is = he.getRequestBody();
+			String line = null;
+			try (BufferedReader br = new BufferedReader(new InputStreamReader(is))) {
+				while ((line = br.readLine()) != null) {
+					System.out.println(line);
 				}
+			}
+
+			sendResponseHeadersOK(he);
+
+			OutputStream os = he.getResponseBody();
+			try (BufferedWriter bw = new BufferedWriter(new OutputStreamWriter(os))) {
+				bw.write(htmlResponse);
 			}
 		}
 		catch (IOException e) {
@@ -1027,6 +1040,7 @@ public class PasteBin {
 
 	private void updateShortUrls(HttpExchange he) {
 		try {
+			String htmlResponse = null;
 			synchronized(dataLock) {
 				Map<String, List<String>> queryMap = handlePost(he);
 
@@ -1070,12 +1084,16 @@ public class PasteBin {
 					}
 				}
 
-				sendResponseHeadersOK(he);
+				StringWriter sw = new StringWriter();
+				writePage(sw, null, "Number of short URLs set (total):  " + count + ".");
+				htmlResponse = sw.toString();
+			}
 
-				OutputStream os = he.getResponseBody();
-				try (BufferedWriter bw = new BufferedWriter(new OutputStreamWriter(os))) {
-					writePage(bw, null, "Number of short URLs set (total):  " + count + ".");
-				}
+			sendResponseHeadersOK(he);
+
+			OutputStream os = he.getResponseBody();
+			try (BufferedWriter bw = new BufferedWriter(new OutputStreamWriter(os))) {
+				bw.write(htmlResponse);
 			}
 		}
 		catch (IOException e) {
