@@ -31,6 +31,7 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.io.OutputStreamWriter;
 import java.io.Reader;
+import java.io.StringWriter;
 import java.io.Writer;
 import java.nio.charset.StandardCharsets;
 
@@ -252,70 +253,70 @@ public class PasteBin {
 		}
 	}
 
-	private void writeHeader(Writer bw) throws IOException {
-		bw.write("<html><head>");
-		bw.write("<meta charset='UTF-8' name='viewport' content='width=640' initial-scale=1>");
-		bw.write("<style>");
-		bw.write("  tbody tr:nth-child(odd) {");
-		bw.write("    background-color: #CEE8FF;");
-		bw.write("    color: #000;");
-		bw.write("  }");
-		bw.write("\r\n");
-		bw.write("  td.top {");
-		bw.write("    vertical-align: top;");
-		bw.write("  }");
-		bw.write("\r\n");
-		bw.write("  td.center {");
-		bw.write("    text-align: center;");
-		bw.write("    vertical-align: middle;");
-		bw.write("  }");
-		bw.write("\r\n");
-		bw.write("  td input[type=button] {");
-		bw.write("    vertical-align: middle;");
-		bw.write("  }");
-		bw.write("\r\n");
-		bw.write("</style>");
-		bw.write("<title>PasteBin</title>");
-		bw.write("\r\n");
-		bw.write("<script>");
-		bw.write("\r\n");
-		bw.write("	function submitForm() {");
-		bw.write("\r\n");
-		bw.write("		if (document.getElementById('fixPercent')) {");
-		bw.write("\r\n");
-		bw.write("			var str = document.getElementById('text').value; ");
-		bw.write("\r\n");
-		bw.write("			var replaced = str.replace(/%/g, '%25');");
-		bw.write("\r\n");
-		bw.write("			document.getElementById('text').value = replaced;");
-		bw.write("\r\n");
-		bw.write("		}");
-		bw.write("\r\n");
-		bw.write("		return true;");
-		bw.write("\r\n");
-		bw.write("	}");
-		bw.write("\r\n");
-		bw.write("</script>");
-		bw.write("\r\n");
-		bw.write("</head>");
+	private void writeHeader(Writer writer) throws IOException {
+		writer.write("<html><head>");
+		writer.write("<meta charset='UTF-8' name='viewport' content='width=640' initial-scale=1>");
+		writer.write("<style>");
+		writer.write("  tbody tr:nth-child(odd) {");
+		writer.write("    background-color: #CEE8FF;");
+		writer.write("    color: #000;");
+		writer.write("  }");
+		writer.write("\r\n");
+		writer.write("  td.top {");
+		writer.write("    vertical-align: top;");
+		writer.write("  }");
+		writer.write("\r\n");
+		writer.write("  td.center {");
+		writer.write("    text-align: center;");
+		writer.write("    vertical-align: middle;");
+		writer.write("  }");
+		writer.write("\r\n");
+		writer.write("  td input[type=button] {");
+		writer.write("    vertical-align: middle;");
+		writer.write("  }");
+		writer.write("\r\n");
+		writer.write("</style>");
+		writer.write("<title>PasteBin</title>");
+		writer.write("\r\n");
+		writer.write("<script>");
+		writer.write("\r\n");
+		writer.write("	function submitForm() {");
+		writer.write("\r\n");
+		writer.write("		if (document.getElementById('fixPercent')) {");
+		writer.write("\r\n");
+		writer.write("			var str = document.getElementById('text').value; ");
+		writer.write("\r\n");
+		writer.write("			var replaced = str.replace(/%/g, '%25');");
+		writer.write("\r\n");
+		writer.write("			document.getElementById('text').value = replaced;");
+		writer.write("\r\n");
+		writer.write("		}");
+		writer.write("\r\n");
+		writer.write("		return true;");
+		writer.write("\r\n");
+		writer.write("	}");
+		writer.write("\r\n");
+		writer.write("</script>");
+		writer.write("\r\n");
+		writer.write("</head>");
 	}
 
-	private void writeForm(Writer bw) throws IOException {
-		bw.write("<form method=\"POST\" action=\"/paste\" enctype=\"application/x-www-form-urlencoded\" onclick='submitForm()'>");
-		bw.write("\r\n");
-		bw.write("<textarea name='text' id='text' style='width: 100%' rows='5' cols='80' autofocus>");
-		bw.write("</textarea>");
-		bw.write("<br>");
-		bw.write("\r\n");
-		bw.write("<input type='checkbox' id='fixPercent' name='fixPercent' checked='true' value='true'>");
-		bw.write("<label for='fixPercent'>Manually Fix Percent</label><br>");
-		bw.write("<input type='checkbox' id='preformatted' name='preformatted' checked='true' value='true'>");
-		bw.write("<label for='preformatted'>Preformatted</label><br>");
-		bw.write("<input type='submit'>");
-		bw.write("</form>");
-		bw.write("<p><a href='/viewDeleted'>View Deleted</a></p>");
-		bw.write("<p></p>");
-		bw.write("<p><a href='/shortUrls'>View/Edit Short URLs</a></p>");
+	private void writeForm(Writer writer) throws IOException {
+		writer.write("<form method=\"POST\" action=\"/paste\" enctype=\"application/x-www-form-urlencoded\" onclick='submitForm()'>");
+		writer.write("\r\n");
+		writer.write("<textarea name='text' id='text' style='width: 100%' rows='5' cols='80' autofocus>");
+		writer.write("</textarea>");
+		writer.write("<br>");
+		writer.write("\r\n");
+		writer.write("<input type='checkbox' id='fixPercent' name='fixPercent' checked='true' value='true'>");
+		writer.write("<label for='fixPercent'>Manually Fix Percent</label><br>");
+		writer.write("<input type='checkbox' id='preformatted' name='preformatted' checked='true' value='true'>");
+		writer.write("<label for='preformatted'>Preformatted</label><br>");
+		writer.write("<input type='submit'>");
+		writer.write("</form>");
+		writer.write("<p><a href='/viewDeleted'>View Deleted</a></p>");
+		writer.write("<p></p>");
+		writer.write("<p><a href='/shortUrls'>View/Edit Short URLs</a></p>");
 	}
 
 	private void writeActiveHistory(Writer writer) throws IOException {
@@ -328,56 +329,57 @@ public class PasteBin {
 		writeHistory(writer, historyList, hsw);
 	}
 
-	private void writeDeletedHistory(BufferedWriter bw) throws IOException {
+	private void writeDeletedHistory(Writer writer) throws IOException {
 		synchronized(dataLock) {
 			if (deletedHistoryList.isEmpty()) {
-				bw.write("There are no entries in the deleted list.");
+				writer.write("There are no entries in the deleted list.");
 			}
 			else {
 				HistorySnippetWriter hsw = (entry) ->  {
-					bw.write(td("center", form("/undelete", entry.getUuid(), "Undelete")));
-					bw.write(td("top", dateFormatter.format(entry.getCreateDate())));
-					bw.write(td("top", dateFormatter.format(entry.getDeletedDate())));
+					writer.write(td("center", form("/undelete", entry.getUuid(), "Undelete")));
+					writer.write(td("top", dateFormatter.format(entry.getCreateDate())));
+					writer.write(td("top", dateFormatter.format(entry.getDeletedDate())));
 				};
 	
-				writeHistory(bw, deletedHistoryList, hsw);
+				writeHistory(writer, deletedHistoryList, hsw);
 			}
 		}
 	}
 
-	private void writePinnedHistory(Writer bw) throws IOException {
+	private void writePinnedHistory(Writer writer) throws IOException {
 		HistorySnippetWriter hsw = (entry) ->  {
-			bw.write(td("center", form("/deletePin", entry.getUuid(), "Delete")));
-			bw.write(td("top", dateFormatter.format(entry.getCreateDate())));
+			writer.write(td("center", form("/deletePin", entry.getUuid(), "Delete")));
+			writer.write(td("top", dateFormatter.format(entry.getCreateDate())));
 		};
 
-		writeHistory(bw, pinnedHistoryList, hsw);
+		writeHistory(writer, pinnedHistoryList, hsw);
 	}
 
-	private void writeHistory(Writer bw, List<HistoryEntry> genericHistoryList, HistorySnippetWriter hsw) throws IOException {
-		writeHistory(bw, genericHistoryList, hsw, null);
+	private void writeHistory(Writer writer, List<HistoryEntry> genericHistoryList, HistorySnippetWriter hsw) throws IOException {
+		writeHistory(writer, genericHistoryList, hsw, null);
 	}
 
-	private void writeHistory(Writer bw, List<HistoryEntry> genericHistoryList, HistorySnippetWriter hsw, String header) throws IOException {
+	private void writeHistory(Writer writer, List<HistoryEntry> genericHistoryList, HistorySnippetWriter hsw, String header) throws IOException {
 		synchronized(dataLock) {
 			if (!genericHistoryList.isEmpty()) {
-				bw.write("<table border='1' width='100%'>");
+				writer.write("<table border='1' width='100%'>");
 				if (header != null) {
-					bw.write(header);
+					writer.write(header);
 				}
 
 				for (HistoryEntry entry : genericHistoryList) {
-					bw.write("<tr><td id='text" + entry.getUuid() + "' class='top'>" + entry.getText() + "</td>");
+					writer.write("<tr><td id='text" + entry.getUuid() + "' class='top'>" + entry.getText() + "</td>");
 					hsw.writeSnippet(entry);
-					bw.write("</tr>");
+					writer.write("</tr>");
 				}
-				bw.write("</table>");
+				writer.write("</table>");
 			}
 		}
 	}
 
 	private void pasteContextHandler(HttpExchange he) {
 		try {
+			String htmlResponse = null;
 			synchronized(dataLock) {
 				Map<String, List<String>> queryMap = handlePost(he);
 
@@ -404,30 +406,30 @@ public class PasteBin {
 				System.out.println(textValue);
 				if (textValue != null && textValue.size() == 1) {
 					String text = textValue.get(0);
-					// URLDecoder is specifically for URL encoded form data but seems to choke on %5C (backslash).
 					System.out.println(text);
-					//text = text.replace("%5C","\\");
 					text = java.net.URLDecoder.decode(text, "UTF-8");
-	
+
 					text = StringEscapeUtils.escapeHtml4(text);
 					if (preformatted) {
 						text = "<pre>" + text + "</pre>";
 					}
-	
+
 					historyList.add(0, new HistoryEntry(text));
 					checkHistoryListLength();
 				}
 
-				// getResponseHeaders
-				System.out.println("Sending response headers.");
+				StringWriter sw = new StringWriter();
+				writePage(sw);
+				htmlResponse = sw.toString();
+			}
 
-				sendResponseHeadersOK(he);
-				OutputStream os = he.getResponseBody();
-				System.out.println("Sending response body.");
+			System.out.println("Sending response headers.");
+			sendResponseHeadersOK(he);
 
-				try (BufferedWriter bw = new BufferedWriter(new OutputStreamWriter(os))) {
-					writePage(bw);
-				}
+			System.out.println("Sending response body.");
+			OutputStream os = he.getResponseBody();
+			try (BufferedWriter bw = new BufferedWriter(new OutputStreamWriter(os))) {
+				bw.write(htmlResponse);
 			}
 		}
 		catch (Exception e) {
