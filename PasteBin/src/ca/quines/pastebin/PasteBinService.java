@@ -10,6 +10,9 @@ import java.io.OutputStream;
 import java.io.StringWriter;
 import java.io.Writer;
 import java.text.SimpleDateFormat;
+import java.time.Instant;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
@@ -41,12 +44,26 @@ public class PasteBinService {
 
 	private int maxMainEntries, maxKeepDeletedDays;
 
-	private SimpleDateFormat dateFormatter = new SimpleDateFormat("'<nobr>'yyyy-MM-dd'</nobr> <nobr>'HH:mm:ss'</nobr>'");
- 	private File saveFile;
+	// Define this at the class level
+	private static final DateTimeFormatter ISO_NOBR_FORMATTER = 
+			DateTimeFormatter.ofPattern("'<nobr>'yyyy-MM-dd'</nobr> <nobr>'HH:mm:ss'</nobr>'")
+			.withZone(ZoneId.systemDefault());
+
+	private File saveFile;
+
+	/**
+	 * The list of pasted items (the main list of items)
+	 */
 	private List<HistoryEntry> historyList;
+
 	private List<HistoryEntry> pinnedHistoryList;
 	private List<HistoryEntry> deletedHistoryList;
 
+	/**
+	 * Load the configuration, all three lists, and set a shutdown hook to save everything on JVM exit.
+	 * 
+	 * @param saveFile
+	 */
 	public PasteBinService(File saveFile) {
 		synchronized(dataLock) {
 			this.saveFile = saveFile;
@@ -61,6 +78,15 @@ public class PasteBinService {
 		Runtime.getRuntime().addShutdownHook(saveHook);
 	}
 
+	/**
+	 * Parse an integer value from a String with the given defaultValue.  Useful for reading data from a
+	 * human-readable file.
+	 * 
+	 * @param props
+	 * @param key
+	 * @param defaultValue
+	 * @return
+	 */
 	private int getIntWithDefault(Properties props, String key, int defaultValue) {
 		if (props == null) {
 			return defaultValue;
@@ -86,24 +112,40 @@ public class PasteBinService {
 			DEFAULT_MAX_KEEP_DELETED_DAYS);
 	}
 
-	private Date convertToDate(String dateAsLongString, Date defaultDate) {
-		Date retVal = defaultDate;
-
+	/**
+	 * Create a date that represents the specified number of milliseconds since the epoch.
+	 * Useful for reading data from a human-readable file.
+	 * 
+	 * @param dateAsLongString
+	 * 		A Long value in String form.  If null or 0, return the current timestamp.
+	 * @param defaultDate
+	 * @return
+	 */
+	private Instant convertToInstant(String dateAsLongString) {
 		if (dateAsLongString == null || dateAsLongString.length() == 0) {
-			return retVal;
+			return Instant.now();
 		}
 
+		Instant retVal;
 		try {
 			long dateAsLong = Long.parseLong(dateAsLongString);
-			retVal = new Date(dateAsLong);
+			retVal = Instant.ofEpochMilli(dateAsLong);
 		}
 		catch (Exception e) {
 			e.printStackTrace();
+			return Instant.now();
 		}
 
 		return retVal;
 	}
 
+	/**
+	 * @see #historyList
+	 * 
+	 * @param historyList
+	 * @param props
+	 * @param prefix
+	 */
 	private void loadHistoryList(List<HistoryEntry> historyList, Properties props, String prefix) {
 		int index = 0;
 		while (true) {
@@ -112,20 +154,18 @@ public class PasteBinService {
 				break;
 			}
 
-			Date createDate = convertToDate(
-				props.getProperty(prefix + "." + index + ".createDate"),
-				new Date());
+			Instant createTs = convertToInstant(
+				props.getProperty(prefix + "." + index + ".createDate"));
 
-			Date deletedDate = convertToDate(
-				props.getProperty(prefix + "." + index + ".deletedDate"),
-				null);
+			Instant deletedTs = convertToInstant(
+				props.getProperty(prefix + "." + index + ".deletedDate"));
 
 			UUID uuid = convertToUUID(props.getProperty(
 				prefix + "." + index + ".uuid"));
 
 			String shortUrl = props.getProperty(prefix + "." + index + ".shortUrl", null);
 
-			historyList.add(new HistoryEntry(text, createDate, deletedDate, uuid, shortUrl));
+			historyList.add(new HistoryEntry(text, createTs, deletedTs, uuid, shortUrl));
 
 			index++;
 		}
@@ -156,12 +196,17 @@ public class PasteBinService {
 
 		// Sort descending by putting h2 first in Long.compare.
 		deletedHistoryList.sort(
-				(HistoryEntry h1, HistoryEntry h2) -> Long.compare(h2.getDeletedDate().getTime(),
-					h1.getDeletedDate().getTime()));
+				(HistoryEntry h1, HistoryEntry h2) -> Long.compare(h2.getDeletedTs().toEpochMilli(),
+					h1.getDeletedTs().toEpochMilli()));
 
 		System.out.println("Data loaded.");
 	}
 
+	/**
+	 * Add an entry to the history list and delete any entries that were deleted earlier than the keep time.
+	 * 
+	 * @param newEntry
+	 */
 	private void addAndManageDeletedHistoryList(HistoryEntry newEntry) {
 		deletedHistoryList.add(0, newEntry);
 
@@ -170,8 +215,8 @@ public class PasteBinService {
 		ListIterator<HistoryEntry> iter = deletedHistoryList.listIterator(deletedHistoryList.size());
 		while (iter.hasPrevious()) {
 			HistoryEntry entry = iter.previous();
-			System.out.println("Comparing " + entry.getDeletedDate().getTime() + " to " + cutoff + ".");
-			if (entry.getDeletedDate().getTime() < cutoff) {
+			System.out.println("Comparing " + entry.getDeletedTs().toEpochMilli() + " to " + cutoff + ".");
+			if (entry.getDeletedTs().toEpochMilli() < cutoff) {
 				System.out.println("Removing old deleted entry.");
 				iter.remove();
 			}
@@ -185,7 +230,7 @@ public class PasteBinService {
 		synchronized(dataLock) {
 			if (historyList.size() > maxMainEntries) {
 				HistoryEntry entry = historyList.remove(historyList.size() - 1);
-				entry.setDeletedDate(new Date());
+				entry.setDeletedTs(Instant.now());
 				addAndManageDeletedHistoryList(entry);
 			}
 		}
@@ -195,7 +240,7 @@ public class PasteBinService {
 		HistorySnippetWriter hsw = (entry) ->  {
 			writer.write(td("center", form("/pin", entry.getUuid(), "Pin")));
 			writer.write(td("center", form("/delete", entry.getUuid(), "Delete")));
-			writer.write(td("top", dateFormatter.format(entry.getCreateDate())));
+			writer.write(td("top", ISO_NOBR_FORMATTER.format(entry.getCreateTs())));
 		};
 
 		writeHistory(writer, historyList, hsw);
@@ -209,10 +254,10 @@ public class PasteBinService {
 			else {
 				HistorySnippetWriter hsw = (entry) ->  {
 					writer.write(td("center", form("/undelete", entry.getUuid(), "Undelete")));
-					writer.write(td("top", dateFormatter.format(entry.getCreateDate())));
-					writer.write(td("top", dateFormatter.format(entry.getDeletedDate())));
+					writer.write(td("top", ISO_NOBR_FORMATTER.format(entry.getCreateTs())));
+					writer.write(td("top", ISO_NOBR_FORMATTER.format(entry.getDeletedTs())));
 				};
-	
+
 				writeHistory(writer, deletedHistoryList, hsw);
 			}
 		}
@@ -221,7 +266,7 @@ public class PasteBinService {
 	private void writePinnedHistory(Writer writer) throws IOException {
 		HistorySnippetWriter hsw = (entry) ->  {
 			writer.write(td("center", form("/deletePin", entry.getUuid(), "Delete")));
-			writer.write(td("top", dateFormatter.format(entry.getCreateDate())));
+			writer.write(td("top", ISO_NOBR_FORMATTER.format(entry.getCreateTs())));
 		};
 
 		writeHistory(writer, pinnedHistoryList, hsw);
@@ -369,11 +414,11 @@ public class PasteBinService {
 		for (HistoryEntry entry : historyList) {
 			props.setProperty(prefix + "." + index + ".text", entry.getText());
 			props.setProperty(prefix + "." + index + ".createDate",
-				"" + entry.getCreateDate().getTime());
+				"" + entry.getCreateTs().toEpochMilli());
 
-			if (entry.getDeletedDate() != null) {
+			if (entry.getDeletedTs() != null) {
 				props.setProperty(prefix + "." + index + ".deletedDate",
-					"" + entry.getDeletedDate().getTime());
+					"" + entry.getDeletedTs().toEpochMilli());
 			}
 
 			if (entry.getShortUrl() != null) {
@@ -501,7 +546,7 @@ public class PasteBinService {
 						HistoryEntry entry = entryIter.next();
 						if (entry.getUuid().equals(uuid)) {
 							entryIter.remove();
-							entry.setDeletedDate(new Date());
+							entry.setDeletedTs(Instant.now());
 							addAndManageDeletedHistoryList(entry);
 							break;
 						}
@@ -539,7 +584,7 @@ public class PasteBinService {
 						HistoryEntry entry = entryIter.next();
 						if (entry.getUuid().equals(uuid)) {
 							entryIter.remove();
-							entry.setDeletedDate(null);
+							entry.setDeletedTs(null);
 							historyList.add(0, entry);
 							checkHistoryListLength();
 							break;
@@ -578,7 +623,7 @@ public class PasteBinService {
 						HistoryEntry entry = entryIter.next();
 						if (entry.getUuid().equals(uuid)) {
 							entryIter.remove();
-							entry.setDeletedDate(new Date());
+							entry.setDeletedTs(Instant.now());
 							addAndManageDeletedHistoryList(entry);
 							break;
 						}
@@ -665,7 +710,7 @@ public class PasteBinService {
 
 			HistorySnippetWriter hsw = (entry) ->  {
 				sw.write(td("center", input(entry.getUuid(), entry.getShortUrl())));
-				sw.write(td("top", dateFormatter.format(entry.getCreateDate())));
+				sw.write(td("top", ISO_NOBR_FORMATTER.format(entry.getCreateTs())));
 			};
 
 			String header = "<tr><th>Text</th><th>Short URL</th><th>Created Date</th></tr>";

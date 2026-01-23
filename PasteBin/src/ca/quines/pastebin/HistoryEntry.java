@@ -1,5 +1,7 @@
 package ca.quines.pastebin;
 
+import java.time.Instant;
+
 // This file is part of the "PasteBin" project.
 
 // The "PasteBin" project is free software: you can redistribute it and/or modify it under the terms of the GNU
@@ -15,56 +17,61 @@ package ca.quines.pastebin;
 
 // Copyright (C) 2022 Christopher Evans
 
-import java.util.Date;
 import java.util.UUID;
 
+/**
+ * Represents a single paste entry which could be active, pinned, or deleted.
+ * 
+ * We use "TS" or "timestamp" for fields and methods to leave it open to change the date/time implementation
+ * without changing the fields and methods again.
+ */
 public class HistoryEntry {
 
-	private Date createDate;
-	private Date deletedDate;
+	private Instant createTs;
+	private Instant deletedTs;
 	private UUID uuid;
 	private String text;
 	private String shortUrl;
 
 	public HistoryEntry(String text) {
-		this(text, new Date());
+		this(text, Instant.now());
 	}
 
-	public HistoryEntry(String text, Date createDate) {
+	public HistoryEntry(String text, Instant createInstant) {
 		this.text = text;
-		this.createDate = createDate;
+		this.createTs = createInstant;
 		this.uuid = UUID.randomUUID();
 	}
 
-	public HistoryEntry(String text, Date createDate, Date deletedDate, UUID uuid) {
+	public HistoryEntry(String text, Instant createInstant, Instant deletedInstant, UUID uuid) {
 		this.text = text;
-		this.createDate = createDate;
-		this.deletedDate = deletedDate;
+		this.createTs = createInstant;
+		this.deletedTs = deletedInstant;
 		this.uuid = uuid;
 	}
 
-	public HistoryEntry(String text, Date createDate, Date deletedDate, UUID uuid, String shortUrl) {
+	public HistoryEntry(String text, Instant createInstant, Instant deletedInstant, UUID uuid, String shortUrl) {
 		this.text = text;
-		this.createDate = createDate;
-		this.deletedDate = deletedDate;
+		this.createTs = createInstant;
+		this.deletedTs = deletedInstant;
 		this.uuid = uuid;
 		this.shortUrl = shortUrl;
 	}
 
-	public Date getCreateDate() {
-		return createDate;
+	public Instant getCreateTs() {
+		return createTs;
 	}
 
 	public String getText() {
 		return text;
 	}
 
-	public void setDeletedDate(Date deletedDate) {
-		this.deletedDate = deletedDate;
+	public void setDeletedTs(Instant deletedDate) {
+		this.deletedTs = deletedDate;
 	}
 
-	public Date getDeletedDate() {
-		return deletedDate;
+	public Instant getDeletedTs() {
+		return deletedTs;
 	}
 
 	public void setUuid(UUID uuid) {
