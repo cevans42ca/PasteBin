@@ -1,8 +1,8 @@
 # Bare Minimum PasteBin
 
-This project provides an extremely small and light PasteBin server that can run almost anywhere Java 8 is installed.  There's only one dependency:  Apache Commons Text, to properly escape HTML.  There's no application server and it doesn't use Spring Boot.
+This project provides an extremely small and light PasteBin server that can run almost anywhere Java 8 is installed.  We use Apache Commons Text to properly escape HTML, and pull in two transitive dependencies.  There's no application server and it doesn't use Spring Boot.
 
-It's an exercise in minimalism.  You might find it quaint.  With only a single JAR as a dependency, we don't need Maven or Gradle.  The build scripts don't need to create a JAR.  How small can we make it while still allowing for maintenance, additional features, and testing?
+It's an exercise in minimalism.  You might find it quaint.  With only three dependent JARs, we don't need Maven or Gradle.  The build scripts don't need to create a JAR.  How small can we make it while still allowing for maintenance, additional features, and testing?
 
 It may be useful to you if all of the following are true.
 
