@@ -17,6 +17,10 @@ package ca.quines.pastebin;
 
 import java.io.IOException;
 
+/**
+ * Provides a functional interface to plug in a different kind of writer for each type of entry
+ * (history, pinned, deleted).
+ */
 public interface HistorySnippetWriter {
 
 	public void writeSnippet(HistoryEntry entry) throws IOException;
