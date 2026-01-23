@@ -1,6 +1,8 @@
 # Bare Minimum PasteBin
 
-This project may be useful to you if all of the following are true.
+This project provides an extremely small and light PasteBin server that can run almost anywhere Java 8 is installed.  There's only one dependency:  Apache Commons Text, to properly escape HTML.  There's no application server and it doesn't use Spring Boot.
+
+It may be useful to you if all of the following are true.
 
 * You're headed to the cottage, or somewhere with a good WiFi router but spotty internet (OR) You want to copy and paste text between computers without it going to the internet but you're OK with it being unsecured on the local network.
 * You want to be able to copy and paste snippets of text (not Rich Text) between your devices.
@@ -8,8 +10,6 @@ This project may be useful to you if all of the following are true.
 * There's going to be a computer there, or at least something capable of getting and running a Java 1.8 (or later) program.  (JDK 1.8 was released March 2014.)
 * You're able to prepare before you head up, or download something small (1 MB) at an opportune time.
 * The WiFi is trusted, and you're not copying anything confidential, so you don't need any kind of security or authentication.
-
-If all of those are true, then this utility might be useful to you.
 
 ## Quick Overview
 
