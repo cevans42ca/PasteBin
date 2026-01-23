@@ -1,0 +1,19 @@
+
+How to get all request headers:
+
+			Headers requestHeaders = he.getRequestHeaders();
+			for (Map.Entry<String, List<String>> entrySet : requestHeaders.entrySet()) {
+				for (String value : entrySet.getValue()) {
+					System.out.println(entrySet.getKey() + "=" + value);
+				}
+			}
+
+
+Query params:
+
+			String queryParms = requestUri.getQuery();
+
+
+Get the request method (usually POST or GET):
+
+			String requestMethod = he.getRequestMethod();
