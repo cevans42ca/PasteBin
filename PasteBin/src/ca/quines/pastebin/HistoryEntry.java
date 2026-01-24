@@ -1,7 +1,5 @@
 package ca.quines.pastebin;
 
-import java.time.Instant;
-
 // This file is part of the "PasteBin" project.
 
 // The "PasteBin" project is free software: you can redistribute it and/or modify it under the terms of the GNU
@@ -16,6 +14,8 @@ import java.time.Instant;
 // Free Software Foundation, 59 Temple Place - Suite 330, Boston, MA, 02111-1307, USA.
 
 // Copyright (C) 2022 Christopher Evans
+
+import java.time.Instant;
 
 import java.util.UUID;
 

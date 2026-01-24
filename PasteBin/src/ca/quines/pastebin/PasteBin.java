@@ -48,6 +48,8 @@ public class PasteBin {
 
 	private static final QuerySplit querySplit = new QuerySplit();
 
+	private static final boolean SAVE_ON_EXIT = true;
+	
 	private HttpServer httpServer;
 	private PasteBinService pasteBinService;
 
@@ -56,7 +58,7 @@ public class PasteBin {
 	}
 
 	public PasteBin(File saveFile, String interfaceSpec) throws UnknownHostException, IOException, IllegalArgumentException {
-		pasteBinService = new PasteBinService(saveFile);
+		pasteBinService = new PasteBinService(saveFile, SAVE_ON_EXIT);
 
 		List<InetAddress> foundInterfaceList = new ArrayList<>();
 		InetAddress foundInterface = null;

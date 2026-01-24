@@ -1,5 +1,20 @@
 package ca.quines.pastebin;
 
+// This file is part of the "PasteBin" project.
+
+// The "PasteBin" project is free software: you can redistribute it and/or modify it under the terms of the GNU
+// General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option)
+// any later version.
+
+// The "PasteBin" project is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without
+// even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+// for more details.
+
+// You should have received a copy of the GNU General Public License along with this project; if not, write to the
+// Free Software Foundation, 59 Temple Place - Suite 330, Boston, MA, 02111-1307, USA.
+
+// Copyright (C) 2022 Christopher Evans
+
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
@@ -24,7 +39,8 @@ import java.util.UUID;
 import org.apache.commons.text.StringEscapeUtils;
 
 /**
- * We separate the business logic into a separate class (this class) to assist with testing.
+ * This class contains the business logic of the application to separate it from the socket handling and
+ * to assist with testing.
  */
 public class PasteBinService {
 
@@ -33,6 +49,9 @@ public class PasteBinService {
 
 	private static final long ONE_DAY_IN_MS = 24 * 60 * 60 * 1000;
 	private static final long KEEP_TIME_IN_MS = ONE_DAY_IN_MS * DEFAULT_MAX_KEEP_DELETED_DAYS;
+
+	/* default */ static final String CONFIG_MAX_KEEP_DELETED_DAYS = "config.max_keep_deleted_days";
+	/* default */ static final String CONFIG_MAX_MAIN_ENTRIES = "config.max_main_entries";
 
 	/**
 	 * This service is meant to be very low traffic and low volume.  We can get away with larger chunks of synchronized
@@ -62,7 +81,7 @@ public class PasteBinService {
 	 * 
 	 * @param saveFile
 	 */
-	public PasteBinService(File saveFile) {
+	public PasteBinService(File saveFile, boolean saveOnExit) {
 		synchronized(dataLock) {
 			this.saveFile = saveFile;
 			this.historyList = new ArrayList<>();
@@ -72,8 +91,10 @@ public class PasteBinService {
 			load();
 		}
 
-		Thread saveHook = new Thread(() -> save());
-		Runtime.getRuntime().addShutdownHook(saveHook);
+		if (saveOnExit) {
+			Thread saveHook = new Thread(() -> save());
+			Runtime.getRuntime().addShutdownHook(saveHook);
+		}
 	}
 
 	/**
@@ -103,10 +124,10 @@ public class PasteBinService {
 	}
 
 	private void setDefaults(Properties props) {
-		maxMainEntries = getIntWithDefault(props, "config.max_main_entries",
+		maxMainEntries = getIntWithDefault(props, CONFIG_MAX_MAIN_ENTRIES,
 			DEFAULT_MAX_MAIN_ENTRIES);
 
-		maxKeepDeletedDays = getIntWithDefault(props, "config.max_keep_deleted_days",
+		maxKeepDeletedDays = getIntWithDefault(props, CONFIG_MAX_KEEP_DELETED_DAYS,
 			DEFAULT_MAX_KEEP_DELETED_DAYS);
 	}
 
@@ -390,8 +411,8 @@ public class PasteBinService {
 		System.out.println("Saving.");
 
 		Properties props = new Properties();
-		props.setProperty("config.max_main_entries", "" + maxMainEntries);
-		props.setProperty("config.max_keep_deleted_days", "" + maxKeepDeletedDays);
+		props.setProperty(CONFIG_MAX_MAIN_ENTRIES, "" + maxMainEntries);
+		props.setProperty(CONFIG_MAX_KEEP_DELETED_DAYS, "" + maxKeepDeletedDays);
 
 		synchronized(dataLock) {
 			saveHistory(historyList, props, "history");

@@ -30,6 +30,10 @@ import java.util.stream.Collectors;
 import static java.util.stream.Collectors.mapping;
 import static java.util.stream.Collectors.toList;
 
+/**
+ * A utility function for splitting a query string from an HttpExchange object.
+ * It contains no state.
+ */
 public class QuerySplit {
 
 	public QuerySplit() {
