@@ -74,8 +74,8 @@ class PasteBinServiceTest {
 	}
 
 	/**
-	 * A functional test to demonstrate that if we load a config file with 5 main entries, we only retain
-	 * 5 entries.
+	 * A functional test to demonstrate that if we load a config file that says to keep only 5 main entries,
+	 * we only retain 5 entries.
 	 * 
 	 * @throws IOException
 	 */
