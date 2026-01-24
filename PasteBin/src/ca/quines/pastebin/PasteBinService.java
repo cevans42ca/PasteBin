@@ -35,6 +35,7 @@ import java.util.ListIterator;
 import java.util.Map;
 import java.util.Properties;
 import java.util.UUID;
+import java.util.logging.Logger;
 
 import org.apache.commons.text.StringEscapeUtils;
 
@@ -43,6 +44,8 @@ import org.apache.commons.text.StringEscapeUtils;
  * to assist with testing.
  */
 public class PasteBinService {
+
+	private static final Logger LOGGER = Logger.getLogger(PasteBinService.class.getName());
 
 	private static final int DEFAULT_MAX_MAIN_ENTRIES = 20;
 	private static final int DEFAULT_MAX_KEEP_DELETED_DAYS = 32;
@@ -191,13 +194,13 @@ public class PasteBinService {
 	}
 
 	private void load() {
-		System.out.println("Loading.");
+		LOGGER.info("Loading.");
 		Properties props = new Properties();
 		try (InputStream is = new FileInputStream(saveFile)) {
 			props.load(is);
 		}
 		catch (FileNotFoundException e) {
-			System.err.println("Unable to load configuration file '" + saveFile.getAbsolutePath() + "'.");
+			LOGGER.severe("Unable to load configuration file '" + saveFile.getAbsolutePath() + "'.");
 			props = null;
 			setDefaults(props);
 			return;
@@ -218,7 +221,7 @@ public class PasteBinService {
 				(HistoryEntry h1, HistoryEntry h2) -> Long.compare(h2.getDeletedTs().toEpochMilli(),
 					h1.getDeletedTs().toEpochMilli()));
 
-		System.out.println("Data loaded.");
+		LOGGER.info("Data loaded.");
 	}
 
 	/**
@@ -234,9 +237,9 @@ public class PasteBinService {
 		ListIterator<HistoryEntry> iter = deletedHistoryList.listIterator(deletedHistoryList.size());
 		while (iter.hasPrevious()) {
 			HistoryEntry entry = iter.previous();
-			System.out.println("Comparing " + entry.getDeletedTs().toEpochMilli() + " to " + cutoff + ".");
+			LOGGER.fine("Comparing " + entry.getDeletedTs().toEpochMilli() + " to " + cutoff + ".");
 			if (entry.getDeletedTs().toEpochMilli() < cutoff) {
-				System.out.println("Removing old deleted entry.");
+				LOGGER.info("Removing old deleted entry.");
 				iter.remove();
 			}
 			else {
@@ -404,11 +407,11 @@ public class PasteBinService {
 
 	private void save() {
 		if (saveFile == null) {
-			System.out.println("Not saving:  no save location.");
+			LOGGER.warning("Not saving:  no save location.");
 			return;
 		}
 
-		System.out.println("Saving.");
+		LOGGER.info("Saving.");
 
 		Properties props = new Properties();
 		props.setProperty(CONFIG_MAX_MAIN_ENTRIES, "" + maxMainEntries);
@@ -486,7 +489,7 @@ public class PasteBinService {
 
 				for (HistoryEntry entry : pinnedHistoryList) {
 					if (requestPath.equals(entry.getShortUrl())) {
-						System.out.println("Found " + entry.getText());
+						LOGGER.fine("Found " + entry.getText());
 						htmlResponse = entry.getText();
 						break OUTER;
 					}
@@ -494,7 +497,7 @@ public class PasteBinService {
 
 				for (HistoryEntry entry : historyList) {
 					if (requestPath.equals(entry.getShortUrl())) {
-						System.out.println("Found " + entry.getText());
+						LOGGER.fine("Found " + entry.getText());
 						htmlResponse = entry.getText();
 						break OUTER;
 					}
@@ -524,10 +527,10 @@ public class PasteBinService {
 			}
 
 			List<String> textValue = queryMap.get("text");
-			System.out.println(textValue);
+			LOGGER.fine(textValue.toString());
 			if (textValue != null && textValue.size() == 1) {
 				String text = textValue.get(0);
-				System.out.println(text);
+				LOGGER.fine(text);
 
 				text = java.net.URLDecoder.decode(text, "UTF-8");
 				text = StringEscapeUtils.escapeHtml4(text);
@@ -788,7 +791,7 @@ public class PasteBinService {
 				if (entry.getValue() != null && entry.getValue().size() == 1) {
 					String simpleValue = entry.getValue().get(0);
 					if (simpleValue.length() > 0) {
-						System.out.println(entry.getKey() + "=" + simpleValue);
+						LOGGER.fine(entry.getKey() + "=" + simpleValue);
 						historyEntry.setShortUrl(simpleValue);
 						count++;
 					}

@@ -39,9 +39,16 @@ import java.util.ArrayList;
 import java.util.Enumeration;
 import java.util.List;
 import java.util.Map;
+import java.util.logging.Logger;
 
-
+/**
+ * Handles interfacing with the console as well as the network.
+ * Console handling will use System.out and System.in, while logging is done with JDK 1.4 logging.
+ * These tasks might be split in the future.
+ */
 public class PasteBin {
+
+	private static final Logger LOGGER = Logger.getLogger(PasteBin.class.getName());
 
 	private static final String SAVE_FILENAME = ".pastebin";
 	private static final String DEFAULT_INET_SEARCH = "192.168.";
@@ -111,7 +118,7 @@ public class PasteBin {
 
 	public static void main(String[] args) throws IOException {
 		File storageFile = new File(System.getProperty("user.home"), SAVE_FILENAME);
-		System.out.println(storageFile.getAbsolutePath());
+		System.out.println("Using save file:  '" + storageFile.getAbsolutePath() + "'.");
 
 		if (args.length > 1) {
 			System.out.println("This program takes zero or one argument:  the interface name or IP to listen on.");
@@ -161,6 +168,24 @@ public class PasteBin {
 		he.getResponseHeaders().set("Content-Type", "text/html; charset=utf-8");
 	}
 
+	/**
+	 * Read and discard the input from the given HttpExchange object.
+	 * There are cases where the HttpExchange object expects us to read the lines, even if we
+	 * don't process them.  If we don't, it might cause I/O to block.
+	 * 
+	 * @param he
+	 * @throws IOException
+	 */
+	private void slurpInput(HttpExchange he) throws IOException {
+		InputStream is = he.getRequestBody();
+		String line = null;
+		try (BufferedReader br = new BufferedReader(new InputStreamReader(is))) {
+			while ((line = br.readLine()) != null) {
+				LOGGER.finer(line);
+			}
+		}
+	}
+
 	private void rootContextHandler(HttpExchange he) {
 		try {
 			String htmlResponse = pasteBinService.rootHandler(he.getRequestURI().getPath());
@@ -189,10 +214,10 @@ public class PasteBin {
 		try {
 			String htmlResponse = pasteBinService.pasteHandler(handlePost(he));
 
-			System.out.println("Sending response headers.");
+			LOGGER.fine("Sending response headers.");
 			sendResponseHeadersOK(he);
 
-			System.out.println("Sending response body.");
+			LOGGER.fine("Sending response body.");
 			OutputStream os = he.getResponseBody();
 			try (BufferedWriter bw = new BufferedWriter(new OutputStreamWriter(os))) {
 				bw.write(htmlResponse);
@@ -213,14 +238,7 @@ public class PasteBin {
 	private void deleteContextHandler(HttpExchange he) {
 		try {
 			String htmlResponse = pasteBinService.deleteHandler(handlePost(he));
-
-			InputStream is = he.getRequestBody();
-			String line = null;
-			try (BufferedReader br = new BufferedReader(new InputStreamReader(is))) {
-				while ((line = br.readLine()) != null) {
-					System.out.println(line);
-				}
-			}
+			slurpInput(he);
 
 			sendResponseHeadersOK(he);
 			OutputStream os = he.getResponseBody();
@@ -236,14 +254,7 @@ public class PasteBin {
 	private void undeleteContextHandler(HttpExchange he) {
 		try {
 			String htmlResponse = pasteBinService.undeleteContextHandler(handlePost(he));
-
-			InputStream is = he.getRequestBody();
-			String line = null;
-			try (BufferedReader br = new BufferedReader(new InputStreamReader(is))) {
-				while ((line = br.readLine()) != null) {
-					System.out.println(line);
-				}
-			}
+			slurpInput(he);
 
 			sendResponseHeadersOK(he);
 			OutputStream os = he.getResponseBody();
@@ -259,14 +270,7 @@ public class PasteBin {
 	private void deletePinContextHandler(HttpExchange he) {
 		try {
 			String htmlResponse = pasteBinService.deletePinContextHandler(handlePost(he));
-
-			InputStream is = he.getRequestBody();
-			String line = null;
-			try (BufferedReader br = new BufferedReader(new InputStreamReader(is))) {
-				while ((line = br.readLine()) != null) {
-					System.out.println(line);
-				}
-			}
+			slurpInput(he);
 
 			sendResponseHeadersOK(he);
 			OutputStream os = he.getResponseBody();
@@ -282,14 +286,7 @@ public class PasteBin {
 	private void pinContextHandler(HttpExchange he) {
 		try {
 			String htmlResponse = pasteBinService.pinContextHandler(handlePost(he));
-
-			InputStream is = he.getRequestBody();
-			String line = null;
-			try (BufferedReader br = new BufferedReader(new InputStreamReader(is))) {
-				while ((line = br.readLine()) != null) {
-					System.out.println(line);
-				}
-			}
+			slurpInput(he);
 
 			sendResponseHeadersOK(he);
 			OutputStream os = he.getResponseBody();
@@ -308,16 +305,7 @@ public class PasteBin {
 			System.out.println(requestUri);
 
 			String htmlResponse = pasteBinService.viewDeletedContextHandler();
-
-			// There are cases where the HttpExchange object expects us to read the lines, even if we don't process them.
-			// If we don't, it might cause I/O to block.
-			InputStream is = he.getRequestBody();
-			String line = null;
-			try (BufferedReader br = new BufferedReader(new InputStreamReader(is))) {
-				while ((line = br.readLine()) != null) {
-					System.out.println(line);
-				}
-			}
+			slurpInput(he);
 
 			sendResponseHeadersOK(he);
 			OutputStream os = he.getResponseBody();
@@ -345,7 +333,7 @@ public class PasteBin {
 	private Map<String, List<String>> handlePost(HttpExchange he) throws IOException {
 		String requestMethod = he.getRequestMethod();
 		if (!"POST".equals(requestMethod)) {
-			System.out.println("Request method " + requestMethod + " is not allowed for updating.");
+			LOGGER.warning("Request method " + requestMethod + " is not allowed for updating.");
 			sendErrorResponse(he, 400, "Only POST is allowed for updating.");
 
 			return null;
@@ -365,7 +353,7 @@ public class PasteBin {
 			     out.append(buffer, 0, numRead);
 			}
 
-			System.out.println(out.toString());
+			LOGGER.finer(out.toString());
 			queryMap = querySplit.splitQuery(out.toString());
 		}
 		catch (IOException e) {
@@ -381,14 +369,7 @@ public class PasteBin {
 	private void shortUrls(HttpExchange he) {
 		try {
 			String htmlResponse = pasteBinService.shortUrlDisplayHandler();
-
-			InputStream is = he.getRequestBody();
-			String line = null;
-			try (BufferedReader br = new BufferedReader(new InputStreamReader(is))) {
-				while ((line = br.readLine()) != null) {
-					System.out.println(line);
-				}
-			}
+			slurpInput(he);
 
 			sendResponseHeadersOK(he);
 
